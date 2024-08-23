@@ -32,12 +32,6 @@ external erlang is used""",
     },
 )
 
-DEFAULT_INSTALL_PREFIX = "/tmp/bazel/erlang"
-
-def _install_root(install_prefix):
-    (root_dir, _, _) = install_prefix.removeprefix("/").partition("/")
-    return "/" + root_dir
-
 def _erlang_build_impl(ctx):
     (_, _, filename) = ctx.attr.url.rpartition("/")
     downloaded_archive = ctx.actions.declare_file(filename)
@@ -45,6 +39,7 @@ def _erlang_build_impl(ctx):
     build_dir_tar = ctx.actions.declare_file(ctx.label.name + "_build.tar")
     build_log = ctx.actions.declare_file(ctx.label.name + "_build.log")
     release_dir_tar = ctx.actions.declare_file(ctx.label.name + "_release.tar")
+    install_path = ctx.actions.declare_directory(ctx.label.name + "_install")
 
     version_file = ctx.actions.declare_file(ctx.label.name + "_version")
 
@@ -52,13 +47,6 @@ def _erlang_build_impl(ctx):
     pre_configure_cmds = "\n".join(ctx.attr.pre_configure_cmds)
     post_configure_cmds = "\n".join(ctx.attr.post_configure_cmds)
     extra_make_opts = " ".join(ctx.attr.extra_make_opts)
-
-    if not ctx.attr.install_prefix.startswith("/"):
-        # otp installations are not relocatable, so the install_prefix
-        # must be absolute to build a predictable location
-        fail("install_prefix must be absolute")
-    install_path = path_join(ctx.attr.install_prefix, ctx.label.name)
-    install_root = _install_root(ctx.attr.install_prefix)
 
     # At one point this rule recevied the erlang sources as a
     # label_list attribute, which had been fetched with a repository
@@ -95,6 +83,7 @@ curl -L "{archive_url}" -o {archive_path}
             build_dir_tar,
             build_log,
             release_dir_tar,
+            install_path,
         ],
         command = """set -euo pipefail
 
@@ -112,10 +101,17 @@ ABS_LOG=$PWD/{build_log}
 ABS_BUILD_DIR="$(mktemp -d)"
 ABS_DEST_DIR="$(mktemp -d)"
 
-tar --extract \\
-    --transform 's/{strip_prefix}//' \\
-    --file "{archive_path}" \\
-    --directory "$ABS_BUILD_DIR"
+if [ "$(uname)" == "Darwin" ]; then
+    tar --extract \\
+        -s "#{strip_prefix}##" \\
+        --file "{archive_path}" \\
+        --directory "$ABS_BUILD_DIR"
+else
+    tar --extract \\
+        --transform 's/{strip_prefix}//' \\
+        --file "{archive_path}" \\
+        --directory "$ABS_BUILD_DIR"
+fi
 
 echo "Building OTP $(cat $ABS_BUILD_DIR/OTP_VERSION) in $ABS_BUILD_DIR"
 
@@ -132,7 +128,7 @@ catch() {{
 
 cd "$ABS_BUILD_DIR"
 {pre_configure_cmds}
-./configure --prefix={install_path} {extra_configure_opts} >> "$ABS_LOG" 2>&1
+./configure --prefix=$PWD/{install_path} {extra_configure_opts} >> "$ABS_LOG" 2>&1
 {post_configure_cmds}
 echo "    configure finished"
 ${{MAKE:=make}} {extra_make_opts} >> "$ABS_LOG" 2>&1
@@ -151,8 +147,7 @@ tar --create \\
             strip_prefix = strip_prefix,
             build_path = build_dir_tar.path,
             release_path = release_dir_tar.path,
-            install_path = install_path,
-            install_root = install_root,
+            install_path = install_path.short_path,
             build_log = build_log.path,
             extra_configure_opts = extra_configure_opts,
             pre_configure_cmds = pre_configure_cmds,
@@ -161,10 +156,10 @@ tar --create \\
         ),
         use_default_shell_env = True,
         mnemonic = "OTP",
-        progress_message = "Compiling otp from source",
+        progress_message = "Compiling OTP from source",
     )
 
-    erlang_home = path_join(install_path, "lib", "erlang")
+    erlang_home = path_join(install_path.path, "lib", "erlang")
 
     ctx.actions.run_shell(
         inputs = [release_dir_tar],
@@ -194,7 +189,7 @@ echo "$V" >> {version_file}
             version_file = version_file.path,
         ),
         mnemonic = "OTP",
-        progress_message = "Validating otp at {}".format(erlang_home),
+        progress_message = "Validating OTP at {}".format(erlang_home),
     )
 
     return [
@@ -220,7 +215,6 @@ erlang_build = rule(
         "url": attr.string(mandatory = True),
         "strip_prefix": attr.string(),
         "sha256v": attr.string(),
-        "install_prefix": attr.string(default = DEFAULT_INSTALL_PREFIX),
         "pre_configure_cmds": attr.string_list(),
         "extra_configure_opts": attr.string_list(),
         "post_configure_cmds": attr.string_list(),

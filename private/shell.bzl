@@ -24,7 +24,7 @@ def _impl(ctx):
 
     erl_libs_path = path_join(package, erl_libs_dir)
 
-    (erlang_home, _, runfiles) = erlang_dirs(ctx, short_path = True)
+    (erlang_home, _, erlang_runfiles) = erlang_dirs(ctx, short_path = True)
 
     output = ctx.actions.declare_file(ctx.label.name)
     script = """\
@@ -52,7 +52,7 @@ set -x
     runfiles = ctx.runfiles(
         files = ctx.files.data,
         transitive_files = depset(erl_libs_files),
-    )
+    ).merge(erlang_runfiles)
 
     return [DefaultInfo(
         runfiles = runfiles,

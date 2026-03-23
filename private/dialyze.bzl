@@ -16,10 +16,20 @@ def _impl(ctx):
     if len(ctx.attr.plt_apps) > 0:
         apps_args = "--apps " + " ".join(ctx.attr.plt_apps)
 
-    if ctx.attr.plt == None:
+    # Collect all PLT files from both 'plt' (singular) and 'plts' (plural)
+    all_plt_files = []
+    if ctx.attr.plt != None:
+        all_plt_files.append(ctx.file.plt)
+    for plt_target in ctx.attr.plts:
+        for f in plt_target.files.to_list():
+            all_plt_files.append(f)
+
+    if len(all_plt_files) == 0:
         plt_args = "--build_plt"
+    elif len(all_plt_files) == 1:
+        plt_args = "--plt " + all_plt_files[0].short_path + " --no_check_plt"
     else:
-        plt_args = "--plt " + ctx.file.plt.short_path + " --no_check_plt"
+        plt_args = "--plts " + " ".join([f.short_path for f in all_plt_files]) + " --no_check_plt"
 
     erl_libs_dir = ctx.label.name + "_deps"
 
@@ -72,7 +82,7 @@ set -x
     )
 
     runfiles = runfiles.merge_all([
-        ctx.runfiles(ctx.files.plt + erl_libs_files + ctx.files.beam),
+        ctx.runfiles(all_plt_files + erl_libs_files + ctx.files.beam),
         ctx.attr.target[DefaultInfo].default_runfiles,
     ])
     return [DefaultInfo(
@@ -85,6 +95,10 @@ dialyze_test = rule(
     attrs = {
         "plt": attr.label(
             allow_single_file = [".plt"],
+        ),
+        "plts": attr.label_list(
+            allow_files = [".plt"],
+            default = [],
         ),
         "beam": attr.label_list(
             allow_files = [".beam"],

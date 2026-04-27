@@ -27,9 +27,7 @@ erlang_package.hex_package(
 )
 use_repo(
     erlang_package,
-    "getopt_src",
     "thoas_rules_erlang",
-    "xref_runner_src",
 )
 
 erlang_config_extension = use_extension(

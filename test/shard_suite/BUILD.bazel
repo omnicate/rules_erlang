@@ -1,9 +1,9 @@
 load(
-    "@rules_erlang//:app_file.bzl",
+    "@rules_erlang//private:app_file.bzl",
     "app_file",
 )
 load(
-    "@rules_erlang//:erlang_bytecode.bzl",
+    "@rules_erlang//:erlang_bytecode2.bzl",
     "erlang_bytecode",
 )
 load(
@@ -32,14 +32,6 @@ load(
 load(
     "@rules_erlang//:ct.bzl",
     "ct_suite",
-)
-load(
-    "@rules_erlang//:source_tree.bzl",
-    "source_tree",
-)
-load(
-    "@rules_erlang//:ez.bzl",
-    "ez",
 )
 
 APP_NAME = "shard_suite"
@@ -152,14 +144,4 @@ ct_suite(
         ":test_example_suite_beam",
         ":test_example_suite_missing_group_beam",
     ],
-)
-
-source_tree(
-    name = "source_tree",
-    deps = [":erlang_app"],
-)
-
-ez(
-    name = "shard_suite",
-    app = ":erlang_app",
 )

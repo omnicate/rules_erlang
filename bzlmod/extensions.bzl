@@ -1,8 +1,4 @@
 load(
-    "//:rules_erlang.bzl",
-    "xref_runner_sources",
-)
-load(
     "//repositories:erlang_config.bzl",
     "INSTALLATION_TYPE_EXTERNAL",
     "INSTALLATION_TYPE_INTERNAL",
@@ -300,8 +296,6 @@ def resolve_local(ctx, packages):
     return deduped
 
 def _erlang_package(module_ctx):
-    xref_runner_sources()
-
     packages = []
     for mod in module_ctx.modules:
         for dep in mod.tags.hex_package:

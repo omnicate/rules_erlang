@@ -1,5 +1,4 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load(":util_test.bzl", "util_test_suite")
 
 config_setting(
     name = "debug_build",
@@ -25,5 +24,3 @@ string_flag(
     build_setting_default = "",
     visibility = ["//visibility:public"],
 )
-
-util_test_suite(name = "util_tests")

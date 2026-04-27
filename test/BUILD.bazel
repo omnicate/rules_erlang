@@ -1,4 +1,3 @@
-load("@rules_erlang//:erl_eval.bzl", "erl_eval")
 load("@rules_erlang//:shell.bzl", "shell")
 
 platform(
@@ -16,22 +15,6 @@ platform(
 alias(
     name = "erlang_26_platform",
     actual = "@erlang_config//:erlang_26_platform",
-)
-
-erl_eval(
-    name = "otp_version",
-    outs = ["otp_version.txt"],
-    expression = """\
-{ok, Version} =\
-    file:read_file(\
-        filename:join([\
-            code:root_dir(),\
-            "releases",\
-            erlang:system_info(otp_release),\
-            "OTP_VERSION"])\
-    ),\
-file:write_file(os:getenv("OUTS"), Version),\
-halt().""",
 )
 
 shell(

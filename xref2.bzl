@@ -3,12 +3,7 @@ load(
     "xref_query",
     "xref_test",
 )
-load(
-    ":xref.bzl",
-    _XREF_TAG = "XREF_TAG",
-)
-
-XREF_TAG = _XREF_TAG
+XREF_TAG = "xref"
 
 def xref(
         name = "xref",

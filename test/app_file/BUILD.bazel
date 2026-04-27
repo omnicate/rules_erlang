@@ -1,4 +1,4 @@
-load("@rules_erlang//:app_file.bzl", "app_file")
+load("@rules_erlang//private:app_file.bzl", "app_file")
 
 app_file(
     name = "app_file",

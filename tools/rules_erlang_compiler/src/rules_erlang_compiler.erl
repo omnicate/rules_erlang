@@ -15,9 +15,17 @@ main(["--persistent_worker"]) ->
         _ ->
             ok
     end,
+    %% Bazel persistent workers communicate WorkRequest/WorkResponse over
+    %% stdin/stdout. Anything written to stdout by us, the compiler, or any
+    %% spawned helper (including OTP logger handlers) corrupts that protocol.
+    %% Capture the original stdio I/O server, then redirect this process's
+    %% group_leader to standard_error so default io:format/1 (and inherited
+    %% leaders of all spawn_link descendants) write to stderr instead.
+    StdIo = group_leader(),
+    true = group_leader(whereis(standard_error), self()),
     io:format(standard_error, "Worker started.~n", []),
     {ok, _} = cas:start_link(),
-    worker_loop();
+    worker_loop(StdIo);
 main(["@" ++ FlagsFilePath]) ->
     {ok, _} = cas:start_link(),
     RawRequest = #{
@@ -41,8 +49,8 @@ main(["@" ++ FlagsFilePath]) ->
 main([]) ->
     exit(1).
 
-worker_loop() ->
-    case io:get_line("") of
+worker_loop(StdIo) ->
+    case io:get_line(StdIo, "") of
         eof ->
             ok;
         {error, Reason} ->
@@ -66,9 +74,9 @@ worker_loop() ->
             Response = executor:execute(Request),
             %% io:format(standard_error, "Map: ~p~n", [Map]),
             Json = thoas:encode(conform_response(Response)),
-            io:format("~ts~n", [Json]),
+            io:format(StdIo, "~ts~n", [Json]),
             %% we should have the cas evict old stuff now
-            worker_loop()
+            worker_loop(StdIo)
     end.
 
 -spec conform_request(thoas:json_term()) -> request().

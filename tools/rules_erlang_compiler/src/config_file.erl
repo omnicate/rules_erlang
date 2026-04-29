@@ -10,11 +10,14 @@ read(ConfigJsonPath) ->
         {ok, ConfigJson} ->
             case thoas:decode(ConfigJson) of
                 {ok, RawConfig} ->
-                    case catch conform_config(RawConfig) of
-                        bad_match ->
-                            {error, "config did not match expected shape"};
+                    try conform_config(RawConfig) of
                         Config ->
                             {ok, Config}
+                    catch
+                        error:{badmatch, _} ->
+                            {error, "config did not match expected shape"};
+                        error:function_clause ->
+                            {error, "config did not match expected shape"}
                     end;
                 E ->
                     E

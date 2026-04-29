@@ -1,0 +1,88 @@
+load("@rules_erlang//:shell.bzl", "shell")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_pkg//pkg:pkg.bzl", "pkg_tar")
+load(":release.bzl", "erlang_release", "erlang_relx_config")
+
+platform(
+    name = "erlang_internal_platform",
+    constraint_values = [
+        "@erlang_config//:erlang_internal",
+        "@erlang_config//:erlang_28",
+    ],
+    parents = ["@local_config_platform//:host"],
+)
+
+erlang_relx_config(
+    name = "umbrella_relx_config",
+    apps = [
+        "greeter",
+        "greeter_web",
+    ],
+    release_name = "umbrella_demo",
+    sys_config_src = "rel/sys.config",
+)
+
+erlang_release(
+    name = "umbrella_release",
+    deps = [
+        "//apps/greeter:erlang_app",
+        "//apps/greeter_web:erlang_app",
+    ],
+    relx_config = ":umbrella_relx_config",
+)
+
+pkg_tar(
+    name = "umbrella_release_tar",
+    package_dir = "opt/umbrella_demo",
+    srcs = [":umbrella_release"],
+    strip_prefix = "umbrella_release",
+)
+
+oci_image(
+    name = "umbrella_image",
+    base = "@debian_bookworm_slim_oci",
+    entrypoint = [
+        "/opt/umbrella_demo/bin/umbrella_demo",
+        "foreground",
+    ],
+    tars = [":umbrella_release_tar"],
+    visibility = ["//visibility:public"],
+    workdir = "/opt/umbrella_demo",
+)
+
+oci_load(
+    name = "umbrella_image_tarball",
+    image = ":umbrella_image",
+    repo_tags = ["rules-erlang/umbrella-example:latest"],
+)
+
+filegroup(
+    name = "umbrella_image.tar",
+    output_group = "tarball",
+    srcs = [":umbrella_image_tarball"],
+    visibility = ["//visibility:public"],
+)
+
+shell(
+    name = "repl",
+    deps = [
+        "//apps/greeter:test_erlang_app",
+        "//apps/greeter_web:test_erlang_app",
+    ],
+    testonly = True,
+)
+
+test_suite(
+    name = "checks",
+    tests = [
+        "//apps/greeter:test_erlang_app_assert_dot_app",
+        "//apps/greeter:eunit",
+        "//apps/greeter:xref",
+        "//apps/greeter:dialyze",
+        "//apps/greeter_web:test_erlang_app_assert_dot_app",
+        "//apps/greeter_web:eunit",
+        "//apps/greeter_web:umbrella_smoke_SUITE",
+        "//apps/greeter_web:xref",
+        "//apps/greeter_web:dialyze",
+    ],
+)

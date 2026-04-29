@@ -1,0 +1,9 @@
+{application,greeter,
+             [{description,"Umbrella example core app"},
+              {vsn,"0.1.0"},
+              {licenses,[]},
+              {links,[]},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[]}]}.

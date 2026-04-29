@@ -1,0 +1,10 @@
+{application,greeter_web,
+             [{description,"Umbrella example release app"},
+              {vsn,"0.1.0"},
+              {licenses,[]},
+              {links,[]},
+              {registered,[]},
+              {mod,{greeter_web_app,[]}},
+              {applications,[kernel,stdlib,greeter]},
+              {env,[]},
+              {modules,[]}]}.

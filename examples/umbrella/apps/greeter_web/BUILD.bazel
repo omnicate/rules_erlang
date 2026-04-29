@@ -1,0 +1,136 @@
+load("@rules_erlang//:compile_many.bzl", "compile_many")
+load("@rules_erlang//:ct.bzl", "ct_test")
+load("@rules_erlang//:dialyze.bzl", "DEFAULT_PLT_APPS", "dialyze", "plt")
+load("@rules_erlang//:erlang_app_sources.bzl", "erlang_app_sources")
+load("@rules_erlang//:erlc_opts_file.bzl", "erlc_opts_file")
+load("@rules_erlang//:eunit2.bzl", "eunit")
+load("@rules_erlang//:extract_app.bzl", "extract_app")
+load("@rules_erlang//:xref2.bzl", "xref")
+
+APP_NAME = "greeter_web"
+
+erlc_opts_file(
+    name = "erlc_opts",
+    out = "erlc_opts_file",
+    values = [
+        "+debug_info",
+        "+warn_export_vars",
+        "+warn_shadow_vars",
+        "+warn_obsolete_guard",
+    ] + select({
+        "@rules_erlang//:debug_build": [],
+        "//conditions:default": ["+deterministic"],
+    }),
+)
+
+erlc_opts_file(
+    name = "test_erlc_opts",
+    out = "test_erlc_opts_file",
+    values = [
+        "+debug_info",
+        "-DTEST=1",
+        "+warn_export_vars",
+        "+warn_shadow_vars",
+        "+warn_obsolete_guard",
+    ] + select({
+        "@rules_erlang//:debug_build": [],
+        "//conditions:default": ["+deterministic"],
+    }),
+)
+
+erlang_app_sources(
+    name = "srcs",
+    app_name = APP_NAME,
+    erlc_opts_file = ":erlc_opts_file",
+    license_files = [],
+    priv = [],
+    private_hdrs = ["src/greeter_web_internal.hrl"],
+    public_hdrs = ["include/greeter_web.hrl"],
+    test_data = [],
+    visibility = ["//visibility:public"],
+)
+
+erlang_app_sources(
+    name = "test_srcs",
+    app_name = APP_NAME,
+    erlc_opts_file = ":test_erlc_opts_file",
+    license_files = [],
+    priv = [],
+    private_hdrs = ["src/greeter_web_internal.hrl"],
+    public_hdrs = ["include/greeter_web.hrl"],
+    test_data = [],
+)
+
+compile_many(
+    name = "beams",
+    apps = [":srcs"],
+    erl_libs = [
+        "@erlang_packages//:deps",
+        "//apps/greeter:beams",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+compile_many(
+    name = "test_beams",
+    apps = [":test_srcs"],
+    erl_libs = [
+        "@erlang_packages//:deps",
+        "//apps/greeter:test_beams",
+    ],
+    testonly = True,
+    visibility = ["//visibility:public"],
+)
+
+extract_app(
+    name = "erlang_app",
+    app_name = APP_NAME,
+    deps = ["//apps/greeter:erlang_app"],
+    erl_libs = ":beams",
+    visibility = ["//visibility:public"],
+)
+
+extract_app(
+    name = "test_erlang_app",
+    app_name = APP_NAME,
+    deps = ["//apps/greeter:test_erlang_app"],
+    erl_libs = ":test_beams",
+    test = True,
+    testonly = True,
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = APP_NAME,
+    actual = ":erlang_app",
+    visibility = ["//visibility:public"],
+)
+
+xref(
+    name = "xref",
+    target = ":test_erlang_app",
+)
+
+plt(
+    name = "deps_plt",
+    apps = DEFAULT_PLT_APPS,
+    for_target = ":test_erlang_app",
+)
+
+dialyze(
+    name = "dialyze",
+    plt = ":deps_plt",
+    target = ":test_erlang_app",
+)
+
+eunit(
+    name = "eunit",
+    target = ":test_erlang_app",
+)
+
+ct_test(
+    name = "umbrella_smoke_SUITE",
+    data = [":test_erlang_app"] + glob(["test/umbrella_smoke_SUITE_data/**/*"]),
+    suite_name = "umbrella_smoke_SUITE",
+    size = "small",
+)

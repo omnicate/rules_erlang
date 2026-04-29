@@ -1,0 +1,5 @@
+build --incompatible_strict_action_env
+build --extra_execution_platforms=//:erlang_internal_platform
+test --extra_execution_platforms=//:erlang_internal_platform
+run --extra_execution_platforms=//:erlang_internal_platform
+common --noincompatible_disallow_empty_glob

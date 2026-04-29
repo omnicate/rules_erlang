@@ -1,0 +1,96 @@
+module(
+    name = "umbrella_example",
+    version = "0.1.0",
+)
+
+bazel_dep(
+    name = "rules_erlang",
+    version = "4.0.0-beta.1",
+)
+
+bazel_dep(
+    name = "rules_oci",
+    version = "2.2.6",
+)
+
+bazel_dep(
+    name = "rules_pkg",
+    version = "1.1.0",
+)
+
+local_path_override(
+    module_name = "rules_erlang",
+    path = "../../",
+)
+
+erlang_config = use_extension(
+    "@rules_erlang//bzlmod:extensions.bzl",
+    "erlang_config",
+)
+erlang_config.internal_erlang_from_prebuilt(
+    version = "28.5",
+    urls = {
+        "aarch64": "https://github.com/gleam-community/erlang-linux-builds/releases/download/OTP-28.5/erlang-28.5-arm64.tar.gz",
+        "x86_64": "https://github.com/gleam-community/erlang-linux-builds/releases/download/OTP-28.5/erlang-28.5-x64.tar.gz",
+    },
+    sha256s = {
+        "aarch64": "0c55e9d2902086310450de66b1436b48d17d9120497728ee950766b324dd448b",
+        "x86_64": "a290f11f8049fc63f0ad7e061a65ef84681284eeca3874af1eb1da3e01198397",
+    },
+)
+use_repo(
+    erlang_config,
+    "erlang_config",
+)
+
+gmake_config = use_extension(
+    "@rules_erlang//bzlmod:extensions.bzl",
+    "gmake_config",
+)
+use_repo(
+    gmake_config,
+    "gmake_config",
+)
+
+erlang_package = use_extension(
+    "@rules_erlang//bzlmod:extensions.bzl",
+    "erlang_package",
+)
+erlang_package.hex_package(
+    name = "relx",
+    sha256 = "12cb77cd4ae7aa5bcea3ec4c62417d3b37304ee9399970981628bed1348c55c5",
+    version = "4.9.0",
+)
+erlang_package.hex_package(
+    name = "bbmustache",
+    sha256 = "43effa3fd4bb9523157af5a9e2276c493495b8459fc8737144aa186cb13ce2ee",
+    version = "1.10.0",
+)
+use_repo(
+    erlang_package,
+    "erlang_packages",
+)
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "debian_bookworm_slim_oci",
+    image = "index.docker.io/library/debian",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+    reproducible = False,
+    tag = "bookworm-slim",
+)
+use_repo(
+    oci,
+    "debian_bookworm_slim_oci",
+    "debian_bookworm_slim_oci_linux_amd64",
+    "debian_bookworm_slim_oci_linux_arm64",
+)
+
+register_toolchains(
+    "@erlang_config//internal:toolchain_major",
+    "@erlang_config//internal:toolchain_major_minor",
+    "@gmake_config//:default_toolchain",
+)

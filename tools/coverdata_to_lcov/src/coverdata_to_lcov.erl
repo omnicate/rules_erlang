@@ -15,13 +15,31 @@ main([CoverdataFile, LcovFile]) ->
 
     ExecRoot = os:getenv("ROOT"),
 
+    %% When COVERDATA_TO_LCOV_USE_MODULE_INFO is set to a non-empty value
+    %% the source path stamped into each module's compile info (available
+    %% in beams built with debug_info) is used instead of globbing under
+    %% AppsDirPaths. Requires the modules themselves to be loadable in the
+    %% running VM (e.g. via ERL_LIBS or -pa pointing at the release lib).
+    %% Optionally COVERDATA_TO_LCOV_SOURCE_PREFIX names a substring; the
+    %% emitted SF: path is sliced to start at that substring (so e.g. an
+    %% absolute sandbox path becomes workspace-relative), and modules whose
+    %% recovered path doesn't contain it are skipped.
+    UseModuleInfo = os:getenv("COVERDATA_TO_LCOV_USE_MODULE_INFO", "") =/= "",
+    SourcePrefix = os:getenv("COVERDATA_TO_LCOV_SOURCE_PREFIX", ""),
+
     ok = cover:import(CoverdataFile),
     Modules = cover:imported_modules(),
-    
+
     {ok, S} = file:open(LcovFile, [write]),
     lists:foreach(
       fun (Module) ->
-              case guess_source_file(AppsDirPaths, Module, ExecRoot) of
+              SFResult = case UseModuleInfo of
+                             true ->
+                                 module_info_source_file(Module, SourcePrefix);
+                             false ->
+                                 guess_source_file(AppsDirPaths, Module, ExecRoot)
+                         end,
+              case SFResult of
                   {ok, SF} ->
                       io:format(S, "SF:~s~n", [SF]),
 
@@ -50,6 +68,25 @@ main([CoverdataFile, LcovFile]) ->
       end, Modules),
     file:close(S),
     io:format(standard_error, "~s: done.~n", [ScriptName]).
+
+module_info_source_file(Module, Prefix) ->
+    try Module:module_info(compile) of
+        Info ->
+            case proplists:lookup(source, Info) of
+                {source, Src} -> apply_source_prefix(Src, Prefix);
+                none -> not_found
+            end
+    catch
+        error:undef -> not_found
+    end.
+
+apply_source_prefix(Src, "") ->
+    {ok, Src};
+apply_source_prefix(Src, Prefix) ->
+    case string:str(Src, Prefix) of
+        0 -> not_found;
+        I -> {ok, lists:nthtail(I - 1, Src)}
+    end.
 
 guess_source_file([], _, _) ->
     not_found;

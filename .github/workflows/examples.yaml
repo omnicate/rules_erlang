@@ -8,7 +8,7 @@ on:
       - bump-rbe
   pull_request:
 jobs:
-  examples-basic:
+  examples-umbrella:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -23,13 +23,13 @@ jobs:
       with:
         otp-version: ${{ matrix.otp }}
     - name: TEST
-      working-directory: examples/basic
+      working-directory: examples/umbrella
       run: |
         bazelisk test //... \
           --color=yes
     - name: RESOVLE TEST LOGS PATH
       if: always()
-      working-directory: examples/basic
+      working-directory: examples/umbrella
       run: |
         echo "LOGS_PATH=$(readlink -f bazel-testlogs)" >> $GITHUB_OUTPUT
       id: resolve-test-logs-path
@@ -37,5 +37,5 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: bazel-testlogs-examples-basic-${{matrix.otp}}
+        name: bazel-testlogs-examples-umbrella-${{matrix.otp}}
         path: ${{ steps.resolve-test-logs-path.outputs.LOGS_PATH }}/*

@@ -8,8 +8,8 @@ load(
     "erlang_toolchain",
 )
 
-DEFAULT_ERLANG_VERSION = "26.0"
-DEFAULT_ERLANG_SHA256 = "3ff3c53d7ef9a45b5720e95b8756269c1a1b58eb51accc992ca97522fdb234d4"
+DEFAULT_ERLANG_VERSION = "28.1"
+DEFAULT_ERLANG_SHA256 = "c7c6fe06a3bf0031187d4cb10d30e11de119b38bdba7cd277898f75d53bdb218"
 
 def erlang_toolchain_external():
     erlang_constraint = Label("@rules_erlang//platforms:erlang_external")

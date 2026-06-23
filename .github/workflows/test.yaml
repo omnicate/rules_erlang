@@ -84,9 +84,24 @@ jobs:
       with:
         name: bazel-testlogs-bzlmod-macos
         path: ${{ steps.resolve-test-logs-path.outputs.LOGS_PATH }}/*
+  check-buildbuddy-secret:
+    runs-on: ubuntu-24.04
+    outputs:
+      has-key: ${{ steps.check.outputs.has-key }}
+    steps:
+    - id: check
+      env:
+        BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+      run: |
+        if [ -n "$BUILDBUDDY_API_KEY" ]; then
+          echo "has-key=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-key=false" >> $GITHUB_OUTPUT
+        fi
   test-bzlmod-internal-erlang:
     runs-on: ubuntu-24.04
-    if: ${{ secrets.BUILDBUDDY_API_KEY != '' }}
+    needs: check-buildbuddy-secret
+    if: needs.check-buildbuddy-secret.outputs.has-key == 'true'
     steps:
     - name: CHECKOUT
       uses: actions/checkout@v7

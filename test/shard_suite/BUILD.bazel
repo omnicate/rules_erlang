@@ -1,9 +1,9 @@
 load(
-    "@rules_erlang//private:app_file.bzl",
+    "@rules_erlang//:app_file.bzl",
     "app_file",
 )
 load(
-    "@rules_erlang//:erlang_bytecode2.bzl",
+    "@rules_erlang//:erlang_bytecode.bzl",
     "erlang_bytecode",
 )
 load(
@@ -69,29 +69,6 @@ erlang_app_info(
     beam = [":beam_files"],
 )
 
-erlang_app_info(
-    name = "test_erlang_app",
-    testonly = True,
-    srcs = ["@rules_erlang//tools/shard_suite:src/shard_suite.erl"],
-    app = ":app_file",
-    app_name = APP_NAME,
-    beam = [":test_beam_files"],
-)
-
-xref()
-
-plt(
-    name = "base_plt",
-    apps = DEFAULT_PLT_APPS + [
-        "crypto",
-        "common_test",
-    ],
-)
-
-dialyze(
-    plt = ":base_plt",
-)
-
 erlang_bytecode(
     name = "test_example_suite_beam",
     testonly = True,
@@ -128,11 +105,38 @@ erlang_bytecode(
     ],
 )
 
-eunit(
-    name = "eunit",
-    compiled_suites = [
+erlang_app_info(
+    name = "test_erlang_app",
+    testonly = True,
+    srcs = ["@rules_erlang//tools/shard_suite:src/shard_suite.erl"],
+    app = ":app_file",
+    app_name = APP_NAME,
+    beam = [":test_beam_files"],
+    test_beam = [
         ":test_example_suite_beam",
         ":test_shard_suite_test_beam",
+    ],
+)
+
+xref()
+
+plt(
+    name = "base_plt",
+    apps = DEFAULT_PLT_APPS + [
+        "crypto",
+        "common_test",
+    ],
+)
+
+dialyze(
+    plt = ":base_plt",
+)
+
+eunit(
+    name = "eunit",
+    eunit_mods = [
+        "example_suite",
+        "shard_suite_test",
     ],
     target = ":test_erlang_app",
 )

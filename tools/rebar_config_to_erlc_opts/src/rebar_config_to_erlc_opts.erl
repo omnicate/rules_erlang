@@ -21,13 +21,18 @@ erlc_opts(RebarConfig) ->
                 lists:flatmap(
                     fun
                         (#{value := V, kind := erlc}) ->
-                            [io_lib:format("+~s", [V])];
+                            [lists:flatten(io_lib:format("+~s", [V]))];
                         (_) ->
                             []
                     end,
                     ErlOpts
                 );
             _ ->
-                ["+debug_info"]
+                []
         end,
-    lists:delete("+warnings_as_errors", lists:usort(["+deterministic", "+debug_info" | ErlcOpts])).
+    Defaults =
+        case lists:member("+no_debug_info", ErlcOpts) of
+            true -> ["+deterministic"];
+            false -> ["+deterministic", "+debug_info"]
+        end,
+    lists:delete("+warnings_as_errors", lists:usort(Defaults ++ ErlcOpts)).

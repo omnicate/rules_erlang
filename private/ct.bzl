@@ -63,7 +63,7 @@ def _impl(ctx):
 
     erl_libs_files = erl_libs_contents(
         ctx,
-        deps = flat_deps(ctx.attr.deps + ctx.attr.compiled_suites),
+        deps = flat_deps(ctx.attr.deps),
         ez_deps = ctx.files.ez_deps,
         dir = erl_libs_dir,
     )
@@ -179,7 +179,7 @@ set -x
     -no_auto_compile \\
     -noinput \\
     ${{FILTER}} \\
-    -dir ebin {pa_args} \\
+    -dir test {pa_args} \\
     -logdir "{log_dir}" \\
     -hidden \\
     -sname {sname} ${{COVER_ARGS}} {extra_args}

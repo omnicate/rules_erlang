@@ -40,7 +40,7 @@ def ct_suite(
 
     erlang_bytecode(
         name = "{}_beam_files".format(suite_name),
-        hdrs = native.glob(["include/*.hrl", "src/*.hrl"] + additional_hdrs),
+        hdrs = native.glob(["include/*.hrl", "src/*.hrl"] + additional_hdrs, allow_empty = True),
         srcs = ["test/{}.erl".format(suite_name)] + additional_srcs,
         erlc_opts = erlc_opts,
         dest = "test",
@@ -69,7 +69,7 @@ def ct_suite_variant(
     if suite_name == "":
         suite_name = name
 
-    data_dir_files = native.glob(["test/{}_data/**/*".format(suite_name)])
+    data_dir_files = native.glob(["test/{}_data/**/*".format(suite_name)], allow_empty = True)
 
     _ct_test(
         shard_suite = Label("@rules_erlang//tools/shard_suite:shard_suite"),

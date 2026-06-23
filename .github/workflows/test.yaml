@@ -86,6 +86,7 @@ jobs:
         path: ${{ steps.resolve-test-logs-path.outputs.LOGS_PATH }}/*
   test-bzlmod-internal-erlang:
     runs-on: ubuntu-24.04
+    if: ${{ secrets.BUILDBUDDY_API_KEY != '' }}
     steps:
     - name: CHECKOUT
       uses: actions/checkout@v7
@@ -170,6 +171,6 @@ jobs:
     steps:
     - name: SUMMARY
       run: |
-        cat << 'EOF' | jq -e 'map(.result == "success") | all(.)'
+        cat << 'EOF' | jq -e 'map(.result == "success" or .result == "skipped") | all(.)'
         ${{ toJson(needs) }}
         EOF

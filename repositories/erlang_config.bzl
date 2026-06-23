@@ -267,6 +267,14 @@ constraint_value(
     constraint_setting = ":erlang_internal_external",
 )
 
+platform(
+    name = "erlang_external_platform",
+    constraint_values = [
+        ":erlang_external",
+    ],
+    parents = ["@platforms//host"],
+)
+
 """
 
     default_installation = erlang_installations[_DEFAULT_EXTERNAL_ERLANG_PACKAGE_NAME]

@@ -13,7 +13,8 @@
     erlc_opts_file := string(),
     app_src := string() | null,
     srcs := [string()],
-    outs := [string()]
+    outs := [string()],
+    test_modules := [string()]
 }.
 
 -type target_extended() :: #{
@@ -22,6 +23,7 @@
     app_src := string() | null,
     srcs := [string()],
     outs := [string()],
+    test_modules := [string()],
     compile_opts := [compile:option()],
     dest_dir := file:filename_all()
 }.

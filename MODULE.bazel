@@ -53,3 +53,7 @@ register_toolchains(
     "@erlang_config//external:toolchain_major_minor",
     "@gmake_config//:default_toolchain",
 )
+
+register_execution_platforms(
+    "@erlang_config//:erlang_external_platform",
+)

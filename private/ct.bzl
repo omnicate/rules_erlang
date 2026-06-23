@@ -39,10 +39,7 @@ def unique_short_dirnames(files):
     return dirs
 
 def code_paths(dep):
-    return [
-        path_join(dep.label.workspace_root, d) if dep.label.workspace_root != "" else d
-        for d in unique_short_dirnames(dep[ErlangAppInfo].beam)
-    ]
+    return unique_short_dirnames(dep[ErlangAppInfo].beam)
 
 # Calling ctx.expand_location with short_paths=True gives
 # "Error in expand_location: Rule in 'private' cannot use private API"

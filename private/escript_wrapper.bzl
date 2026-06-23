@@ -90,24 +90,71 @@ def _impl(ctx):
 OTP_TAR="$(_resolve '{tar_rloc}' '{tar_exec}')" || \\
     {{ echo>&2 "ERROR: OTP release tar not found (rloc='{tar_rloc}', exec='{tar_exec}')"; exit 1; }}
 OTP_DIR="{install_path}"
-# mkdir(2) is the lock; whoever wins extracts. Same convention as
-# rules_erlang's `maybe_install_erlang`, so the cache is shared with
-# other rules. Portable across GNU and BSD coreutils (no `mv
-# --no-target-directory`, no `find -executable`).
-mkdir -p "$(dirname "${{OTP_DIR}}")"
-if mkdir "${{OTP_DIR}}" 2>/dev/null; then
-    tar --extract --directory "${{OTP_DIR}}" --file "${{OTP_TAR}}"
+OTP_PARENT="$(dirname "${{OTP_DIR}}")"
+OTP_READY="${{OTP_DIR}}/.ready"
+mkdir -p "${{OTP_PARENT}}"
+
+# Install protocol:
+#   1. Each process extracts into a unique sibling tmp dir of OTP_DIR
+#      (same filesystem so rename(2) is atomic).
+#   2. The .ready sentinel is touched inside the tmp dir as the LAST
+#      step, after tar returns successfully.
+#   3. The tmp dir is atomically renamed onto OTP_DIR. The first
+#      winner installs; concurrent losers discard their tmp.
+#   4. Waiters poll for OTP_DIR/.ready. Polling on bin/escript was
+#      unsafe because tar emits bin/ entries before lib/, so escript
+#      could appear long before kernel/stdlib were on disk.
+#
+# Stale recovery: if OTP_DIR exists with no .ready (e.g. left behind
+# by an interrupted run of an older wrapper that did mkdir+tar
+# in-place), take a mkdir-based heal lock, re-check .ready under the
+# lock, then rm -rf and retry. The re-check guarantees we never nuke
+# a fresh install produced by a concurrent extractor.
+#
+# Assumes Linux semantics: rename(2)/`mv -T` returns ENOTEMPTY when
+# the target is a non-empty directory. BSD `mv` lacks `-T` and is
+# not supported here.
+_otp_extract() {{
+    local _tmp
+    _tmp="$(mktemp -d -p "${{OTP_PARENT}}")" || return 1
+    if tar --extract --directory "${{_tmp}}" --file "${{OTP_TAR}}" \\
+        && touch "${{_tmp}}/.ready" \\
+        && mv -T "${{_tmp}}" "${{OTP_DIR}}" 2>/dev/null; then
+        return 0
+    fi
+    rm -rf "${{_tmp}}"
+    return 1
+}}
+
+_otp_wait() {{
+    local _i
+    for _i in $(seq 1 60); do
+        [[ -f "${{OTP_READY}}" ]] && return 0
+        sleep 1
+    done
+    return 1
+}}
+
+if [[ ! -f "${{OTP_READY}}" ]]; then
+    _otp_extract || true
+    if ! _otp_wait; then
+        if mkdir "${{OTP_DIR}}.heal" 2>/dev/null; then
+            if [[ ! -f "${{OTP_READY}}" ]]; then
+                rm -rf "${{OTP_DIR}}"
+            fi
+            rmdir "${{OTP_DIR}}.heal" 2>/dev/null || true
+            _otp_extract || true
+        fi
+        _otp_wait || {{
+            echo>&2 "ERROR: OTP install at ${{OTP_DIR}} is incomplete (no .ready sentinel)."
+            echo>&2 "       Recovery: rm -rf ${{OTP_PARENT}} and retry."
+            exit 1
+        }}
+    fi
 fi
+
 ERLANG_HOME="${{OTP_DIR}}{erlang_home_suffix}"
 ESCRIPT_BIN="${{ERLANG_HOME}}/bin/escript"
-# Wait briefly for a concurrent extractor (lost the mkdir race) to
-# finish writing bin/escript, mirroring `maybe_install_erlang`'s
-# implicit assumption that "directory exists" means "extraction in
-# progress or done".
-for _ in $(seq 1 60); do
-    [[ -x "${{ESCRIPT_BIN}}" ]] && break
-    sleep 1
-done
 [[ -x "${{ESCRIPT_BIN}}" ]] || \\
     {{ echo>&2 "ERROR: ${{ESCRIPT_BIN}} not found or not executable after extraction"; exit 1; }}\
 """.format(

@@ -96,6 +96,8 @@ jobs:
       uses: actions/checkout@v7
     - name: CONFIGURE ERLANG
       uses: erlef/setup-beam@v1
+      env:
+        ImageOS: win25
       with:
         otp-version: ${{ matrix.otp }}
     - name: CONFIGURE BAZEL

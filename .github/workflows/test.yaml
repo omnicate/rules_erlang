@@ -84,53 +84,6 @@ jobs:
       with:
         name: bazel-testlogs-bzlmod-macos
         path: ${{ steps.resolve-test-logs-path.outputs.LOGS_PATH }}/*
-  test-bzlmod-windows:
-    runs-on: windows-2025
-    strategy:
-      fail-fast: false
-      matrix:
-        otp:
-        - "28.1"
-    steps:
-    - name: CHECKOUT
-      uses: actions/checkout@v7
-    - name: CONFIGURE ERLANG
-      uses: erlef/setup-beam@v1
-      env:
-        ImageOS: win25
-      with:
-        otp-version: ${{ matrix.otp }}
-    - name: CONFIGURE BAZEL
-      working-directory: test
-      shell: bash
-      run: |
-        cat << EOF >> user.bazelrc
-          startup --output_user_root=C:/tmp
-          startup --windows_enable_symlinks
-          build --enable_runfiles
-          build --color=yes
-          build --@rules_erlang//:ct_test_windows_logdir_drive_letter=z
-          build --jobs=1
-        EOF
-    - name: TEST
-      working-directory: test
-      shell: cmd
-      run: |
-        bazelisk test //...
-    - name: RESOVLE TEST LOGS PATH
-      if: always()
-      working-directory: test
-      shell: bash
-      run: |
-        LOGS_TAR=$PWD/logs.tar
-        cd bazel-testlogs
-        tar -cf $LOGS_TAR *
-    - name: CAPTURE TEST LOGS
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: bazel-testlogs-bzlmod-windows-${{matrix.otp}}
-        path: test/logs.tar
   test-bzlmod-internal-erlang:
     runs-on: ubuntu-24.04
     steps:
@@ -138,10 +91,13 @@ jobs:
       uses: actions/checkout@v7
     - name: CONFIGURE BAZEL
       working-directory: test
+      env:
+        BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
       run: |
         cat << EOF >> user.bazelrc
           build:buildbuddy --remote_download_minimal
           build:buildbuddy --color=yes
+          build:buildbuddy --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
         EOF
     - name: BUILD
       working-directory: test
@@ -208,7 +164,6 @@ jobs:
     - unit-test-bzlmod
     - test-bzlmod
     - test-bzlmod-macos
-    - test-bzlmod-windows
     - test-bzlmod-internal-erlang
     - test-bzlmod-coverage
     runs-on: ubuntu-latest

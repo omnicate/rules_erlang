@@ -11,7 +11,7 @@ bazel_dep(
 
 bazel_dep(
     name = "platforms",
-    version = "0.0.10",
+    version = "0.0.11",
 )
 
 erlang_package = use_extension(
@@ -52,4 +52,8 @@ register_toolchains(
     "@erlang_config//external:toolchain_major",
     "@erlang_config//external:toolchain_major_minor",
     "@gmake_config//:default_toolchain",
+)
+
+register_execution_platforms(
+    "@erlang_config//:erlang_external_platform",
 )

@@ -104,7 +104,7 @@ xref(
 
 plt(
     name = "deps_plt",
-    apps = DEFAULT_PLT_APPS,
+    apps = DEFAULT_PLT_APPS + ["eunit", "common_test"],
     for_target = ":test_erlang_app",
 )
 

@@ -18,6 +18,15 @@ def _impl(ctx):
         public_hdrs = app_info.source_info.public_hdrs
         private_hdrs = app_info.source_info.private_hdrs
 
+    # Only .beam and .app outputs collide between same-package
+    # extract_app targets (e.g. a prod :erlang_app and a
+    # :test_erlang_app extracting the same app), so namespace just
+    # those under the target name. Header and priv outputs stay at
+    # their natural location so that consumers stripping the package
+    # prefix via additional_file_dest_relative_path (e.g. for hex
+    # packages that ship priv files like relx) keep working.
+    beam_prefix = ctx.label.name
+
     out_base = None
     if ctx.attr.copy_headers:
         for out in app_info.outs:
@@ -38,6 +47,7 @@ def _impl(ctx):
             if not ctx.attr.test and is_test_module:
                 continue
             dest = ctx.actions.declare_file(path_join(
+                beam_prefix,
                 "ebin",
                 out.basename,
             ))

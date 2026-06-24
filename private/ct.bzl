@@ -39,10 +39,7 @@ def unique_short_dirnames(files):
     return dirs
 
 def code_paths(dep):
-    return [
-        path_join(dep.label.workspace_root, d) if dep.label.workspace_root != "" else d
-        for d in unique_short_dirnames(dep[ErlangAppInfo].beam)
-    ]
+    return unique_short_dirnames(dep[ErlangAppInfo].beam)
 
 # Calling ctx.expand_location with short_paths=True gives
 # "Error in expand_location: Rule in 'private' cannot use private API"
@@ -63,7 +60,7 @@ def _impl(ctx):
 
     erl_libs_files = erl_libs_contents(
         ctx,
-        deps = flat_deps(ctx.attr.deps + ctx.attr.compiled_suites),
+        deps = flat_deps(ctx.attr.deps),
         ez_deps = ctx.files.ez_deps,
         dir = erl_libs_dir,
     )
@@ -179,7 +176,7 @@ set -x
     -no_auto_compile \\
     -noinput \\
     ${{FILTER}} \\
-    -dir ebin {pa_args} \\
+    -dir test {pa_args} \\
     -logdir "{log_dir}" \\
     -hidden \\
     -sname {sname} ${{COVER_ARGS}} {extra_args}

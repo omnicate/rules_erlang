@@ -32,7 +32,8 @@ injects_modules(Config) ->
             "bazel-out/darwin-fastbuild/bin/deps_dir/basic/src/basic_acceptor.erl",
             "bazel-out/darwin-fastbuild/bin/deps_dir/basic/ebin/basic_acceptors_sup.beam",
             "bazel-out/darwin-fastbuild/bin/deps_dir/basic/src/basic_acceptors_sup.erl"
-        ]
+        ],
+        test_modules => []
     },
 
     Output = filename:join([DestDir, "basic", "ebin", "basic.app"]),

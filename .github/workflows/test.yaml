@@ -182,6 +182,7 @@ jobs:
     - test-bzlmod-macos
     - test-bzlmod-internal-erlang
     - test-bzlmod-coverage
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
     - name: SUMMARY

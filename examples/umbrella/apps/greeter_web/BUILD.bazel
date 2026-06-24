@@ -1,5 +1,5 @@
 load("@rules_erlang//:compile_many.bzl", "compile_many")
-load("@rules_erlang//:ct.bzl", "ct_test")
+load("@rules_erlang//:ct.bzl", "ct_suite")
 load("@rules_erlang//:dialyze.bzl", "DEFAULT_PLT_APPS", "dialyze", "plt")
 load("@rules_erlang//:erlang_app_sources.bzl", "erlang_app_sources")
 load("@rules_erlang//:erlc_opts_file.bzl", "erlc_opts_file")
@@ -128,9 +128,8 @@ eunit(
     target = ":test_erlang_app",
 )
 
-ct_test(
+ct_suite(
     name = "umbrella_smoke_SUITE",
-    data = [":test_erlang_app"] + glob(["test/umbrella_smoke_SUITE_data/**/*"]),
     suite_name = "umbrella_smoke_SUITE",
     size = "small",
 )

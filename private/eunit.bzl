@@ -1,6 +1,7 @@
 load(
     "//:erlang_app_info.bzl",
     "ErlangAppInfo",
+    "flat_deps",
 )
 load(
     "//:util.bzl",
@@ -48,10 +49,15 @@ def _quote(string_list_term):
     return string_list_term.replace('"', '\\"')
 
 def _impl(ctx):
-    deps = list(ctx.attr.deps)
     lib_info = ctx.attr.target[ErlangAppInfo]
-    deps.extend(lib_info.deps)
-    deps.append(ctx.attr.target)
+
+    # The test target must come first so that flat_deps's first-wins
+    # de-dup by app_name picks the test variant over any prod variant
+    # of the same app pulled in transitively via test_deps cycles
+    # (e.g. app A depends on B in test_deps, and B depends on A).
+    # Without this, two ErlangAppInfos sharing an app_name would both
+    # try to symlink their .beam files to the same ERL_LIBS path.
+    deps = flat_deps([ctx.attr.target] + list(ctx.attr.deps) + lib_info.deps)
 
     # Use the eunit_mods attribute if provided, otherwise calculate from beam and test_beam
     # Note: when eunit_mods is not provided, we need to include both:

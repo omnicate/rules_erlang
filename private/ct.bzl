@@ -18,6 +18,7 @@ load(
 )
 load(
     ":eunit.bzl",
+    "invert_package",
     "package_relative_dirnames",
     "short_dirname",
 )
@@ -58,9 +59,21 @@ def sname(ctx):
 def _impl(ctx):
     erl_libs_dir = ctx.label.name + "_deps"
 
+    # compiled_suites may be raw .beam targets (erlang_bytecode, via the
+    # ct_suite macro) or a full app target like :test_erlang_app. When
+    # an entry provides ErlangAppInfo, include its transitive app
+    # closure in ERL_LIBS — otherwise the suite's runtime deps
+    # (e.g. application:ensure_all_started/1 of the app under test
+    # and its prod deps) would not resolve at suite startup.
+    suite_app_deps = [
+        t
+        for t in ctx.attr.compiled_suites
+        if ErlangAppInfo in t
+    ]
+
     erl_libs_files = erl_libs_contents(
         ctx,
-        deps = flat_deps(ctx.attr.deps),
+        deps = flat_deps(ctx.attr.deps + suite_app_deps),
         ez_deps = ctx.files.ez_deps,
         dir = erl_libs_dir,
     )
@@ -69,9 +82,30 @@ def _impl(ctx):
 
     erl_libs_path = path_join(package, erl_libs_dir)
 
+    # Compute -dir arg(s) from where the actual _SUITE.beam files live.
+    # The ct_suite macro compiles suites into test/, so for that path
+    # we'd see ["test"] here; users who pass an extract_app target
+    # (e.g. :test_erlang_app) directly as compiled_suites see the
+    # namespaced ebin dir (e.g. test_erlang_app/ebin) post-e70ed5a.
+    # ct_run hard-fails ("Directory ... is invalid") if any -dir entry
+    # is missing, so we must point it at real dirs.
+    suite_dirs = []
+    for f in ctx.files.compiled_suites:
+        if not f.basename.endswith("_SUITE.beam"):
+            continue
+        sd = short_dirname(f)
+        if sd.startswith(package + "/"):
+            rel = sd.removeprefix(package + "/")
+        else:
+            rel = path_join(invert_package(package), sd)
+        if rel not in suite_dirs:
+            suite_dirs.append(rel)
+    if not suite_dirs:
+        suite_dirs = ["test"]
+
     pa_args = []
     for dir in package_relative_dirnames(package, ctx.files.compiled_suites):
-        if dir != "test":
+        if dir not in suite_dirs:
             pa_args.extend(["-pa", dir])
 
     ct_logdir = ctx.attr._ct_logdir[BuildSettingInfo].value
@@ -176,7 +210,7 @@ set -x
     -no_auto_compile \\
     -noinput \\
     ${{FILTER}} \\
-    -dir test {pa_args} \\
+    -dir {dir_args} {pa_args} \\
     -logdir "{log_dir}" \\
     -hidden \\
     -sname {sname} ${{COVER_ARGS}} {extra_args}
@@ -199,7 +233,8 @@ fi
         coverdata_to_lcov = coverdata_to_lcov_path,
         suite_name = ctx.attr.suite_name,
         pa_args = " ".join(pa_args),
-        dir = path_join(package, "test"),
+        dir_args = " ".join(suite_dirs),
+        dir = path_join(package, suite_dirs[0]),
         log_dir = log_dir,
         sname = sname(ctx),
         extra_args = " ".join(extra_args),

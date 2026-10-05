@@ -220,6 +220,8 @@ if [ -n "${{COVERAGE}}" ]; then
         ${{COVERAGE_OUTPUT_FILE}} \\
         ${{COVERAGE_OUTPUT_FILE}} \\
         > ${{TEST_UNDECLARED_OUTPUTS_DIR}}/coverdata_to_lcov.log
+    # Keep a copy, as COVERAGE_OUTPUT_FILE is discarded with --experimental_split_coverage_postprocessing
+    cp ${{COVERAGE_OUTPUT_FILE}} ${{TEST_UNDECLARED_OUTPUTS_DIR}}/coverage.dat
 fi
 """.format(
         maybe_install_erlang = maybe_install_erlang(ctx, short_path = True),

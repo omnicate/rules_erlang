@@ -61,22 +61,33 @@ def _impl(ctx):
 
     # Use the eunit_mods attribute if provided, otherwise calculate from beam and test_beam
     # Note: when eunit_mods is not provided, we include:
-    # - every source module (EUnit also runs the tests of its *_tests module, if any)
-    # - *_tests modules from test_beam that have no source module of the same name
+    # - for each *_tests module in test_beam, its source module M if there is one
+    #   (EUnit runs the tests in M and then those in M_tests), else M_tests itself
+    # - the remaining source modules
     # EUnit only looks from M to M_tests, never from M_tests back to M, so running
-    # M_tests instead of M would skip the tests defined in M.
+    # M_tests instead of M would skip the tests defined in M. The *_tests modules
+    # keep running first and in the same order.
     if ctx.attr.eunit_mods:
         eunit_mods = list(ctx.attr.eunit_mods)
     else:
+        src_modules = [
+            m.basename.removesuffix(".beam")
+            for m in lib_info.beam
+            if m.extension == "beam"
+        ]
         eunit_mods = []
-        for m in lib_info.beam:
-            if m.extension == "beam":
-                eunit_mods.append(m.basename.removesuffix(".beam"))
         for m in lib_info.test_beam:
             if m.extension == "beam":
                 module_name = m.basename.removesuffix(".beam")
-                if module_name.endswith("_tests") and module_name.removesuffix("_tests") not in eunit_mods:
-                    eunit_mods.append(module_name)
+                if module_name.endswith("_tests"):
+                    src_module = module_name.removesuffix("_tests")
+                    if src_module in src_modules:
+                        eunit_mods.append(src_module)
+                    else:
+                        eunit_mods.append(module_name)
+        for module_name in src_modules:
+            if module_name not in eunit_mods:
+                eunit_mods.append(module_name)
 
     erl_libs_dir = ctx.label.name + "_deps"
 

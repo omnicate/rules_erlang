@@ -213,7 +213,7 @@ set -x
     -dir {dir_args} {pa_args} \\
     -logdir "{log_dir}" \\
     -hidden \\
-    -sname {sname} ${{COVER_ARGS}} {extra_args}
+    -sname {sname}-$(od -An -N4 -tx4 /dev/urandom | tr -d ' ') ${{COVER_ARGS}} {extra_args}
 set +x
 if [ -n "${{COVERAGE}}" ]; then
     "{erlang_home}"/bin/escript $TEST_SRCDIR/$TEST_WORKSPACE/{coverdata_to_lcov} \\

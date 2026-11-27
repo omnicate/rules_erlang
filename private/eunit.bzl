@@ -60,28 +60,22 @@ def _impl(ctx):
     deps = flat_deps([ctx.attr.target] + list(ctx.attr.deps) + lib_info.deps)
 
     # Use the eunit_mods attribute if provided, otherwise calculate from beam and test_beam
-    # Note: when eunit_mods is not provided, we need to include both:
-    # - source modules that DON'T have a corresponding *_tests module (to avoid double execution)
-    # - *_tests modules from test_beam (which auto-discover tests in their corresponding source module)
+    # Note: when eunit_mods is not provided, we include:
+    # - every source module (EUnit also runs the tests of its *_tests module, if any)
+    # - *_tests modules from test_beam that have no source module of the same name
+    # EUnit only looks from M to M_tests, never from M_tests back to M, so running
+    # M_tests instead of M would skip the tests defined in M.
     if ctx.attr.eunit_mods:
         eunit_mods = list(ctx.attr.eunit_mods)
     else:
         eunit_mods = []
-        # First, collect all *_tests module names to know which source modules are already covered
-        tests_modules = []
+        for m in lib_info.beam:
+            if m.extension == "beam":
+                eunit_mods.append(m.basename.removesuffix(".beam"))
         for m in lib_info.test_beam:
             if m.extension == "beam":
                 module_name = m.basename.removesuffix(".beam")
-                if module_name.endswith("_tests"):
-                    tests_modules.append(module_name)
-                    eunit_mods.append(module_name)
-        # Include source modules only if they don't have a corresponding *_tests module
-        # (EUnit auto-discovers tests in source module when running the *_tests module)
-        for m in lib_info.beam:
-            if m.extension == "beam":
-                module_name = m.basename.removesuffix(".beam")
-                corresponding_tests = module_name + "_tests"
-                if corresponding_tests not in tests_modules:
+                if module_name.endswith("_tests") and module_name.removesuffix("_tests") not in eunit_mods:
                     eunit_mods.append(module_name)
 
     erl_libs_dir = ctx.label.name + "_deps"

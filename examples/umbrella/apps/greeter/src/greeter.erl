@@ -7,3 +7,10 @@ greeting(Name) when is_list(Name) ->
     greeting(unicode:characters_to_binary(Name));
 greeting(Name) when is_binary(Name) ->
     <<"Hello, ", Name/binary, "!">>.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+greeting_binary_test() ->
+    ?assertEqual(<<"Hello, src!">>, greeting(<<"src">>)).
+-endif.
